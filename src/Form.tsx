@@ -1,16 +1,19 @@
 import React, { useState } from "react";
+import { useSubmitForm } from "./useSubmitForm";
 
-interface IFormStateProp {
+export interface IFormStateProp {
   email: string;
   password: string;
 }
 
 const Form: React.FC = () => {
+  const { data: responseData, submitData } = useSubmitForm();
   const [data, setData] = useState<IFormStateProp>({
     email: "",
     password: "",
   });
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const validateData = () => {
     const trimmedEmail = data.email.trim();
@@ -24,23 +27,28 @@ const Form: React.FC = () => {
       return "Password cannot be empty.";
     } else if (
       // Example Email validation
-      atIndex > 0 && // At least one character before '@'
-      trimmedEmail.split("").filter((x) => x === "@").length === 1 && // Exactly one '@' symbol
-      dotIndex > atIndex + 1 && // At least one character between '@' and '.'
-      dotIndex < trimmedEmail.length - 1 // At least one character after the last '.'
+      atIndex < 0 || // At least one character before '@'
+      trimmedEmail.split("").filter((x) => x === "@").length !== 1 || // Exactly one '@' symbol
+      dotIndex < atIndex + 1 || // At least one character between '@' and '.'
+      dotIndex > trimmedEmail.length - 1 // At least one character after the last '.'
     ) {
       return "Please input a valid email.";
     }
-      return "";
+    return "";
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const validationResult = validateData();
-    const isError = validationResult?.length === 0;
-    
+    const isError = validationResult?.length !== 0;
+
     setErrorMessage(validationResult);
 
     if (!isError) {
+      await submitData(data);
+
+      if (responseData?.statusCode === 200) {
+        setSuccessMessage(responseData.message);
+      }
     }
   };
 
@@ -68,6 +76,7 @@ const Form: React.FC = () => {
             const value = event.target.value;
             setData({ ...data, email: value });
             setErrorMessage("");
+            setSuccessMessage('');
           }}
         />
       </div>
@@ -83,6 +92,7 @@ const Form: React.FC = () => {
             const value = event.target.value;
             setData({ ...data, password: value });
             setErrorMessage("");
+            setSuccessMessage('');
           }}
         />
       </div>
@@ -91,7 +101,13 @@ const Form: React.FC = () => {
         Login
       </button>
 
-      {errorMessage !== "" && <h3 style={{ margin: 0 }}>{errorMessage}</h3>}
+      {errorMessage !== "" && (
+        <h3 style={{ margin: 0, color: "red" }}>{errorMessage}</h3>
+      )}
+      
+      {successMessage !== "" && (
+        <h3 style={{ margin: 0, color: "green" }}>{successMessage}</h3>
+      )}
     </div>
   );
 };
